@@ -12,9 +12,158 @@ datasource db {
   provider = "postgresql"
 }
 
-model TodoLoeschmich {
-  id        Int      @id @default(autoincrement())
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  PARENT
+  INSTRUCTOR
+  ADMIN
+}
+
+enum PhaseStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  ALLOCATION
+  ACTIVE
+  REPORTING
+  ARCHIVED
+}
+
+enum ActivityStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION
+  ALLOCATION
+  EXECUTION
+  REPORTING
+  ARCHIVED
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+}
+
+// ─── User & Roles ─────────────────────────────────────────────────────────────
+
+model Profile {
+  id          String   @id @default(uuid())
+  supabaseId  String   @unique
+  role        Role     @default(PARENT)
+  firstName   String
+  lastName    String
+  email       String   @unique
+  phone       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  children      Child[]
+  activities    Activity[]   @relation("InstructorActivities")
+  newsPosts     NewsPost[]
+  registrations Registration[]
+}
+
+// ─── Children ─────────────────────────────────────────────────────────────────
+
+model Child {
+  id              String   @id @default(uuid())
+  parentId        String
+  firstName       String
+  lastName        String
+  dateOfBirth     DateTime
+  emergencyName   String?
+  emergencyPhone  String?
+  medicalNotes    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  parent        Profile        @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  registrations Registration[]
+}
+
+// ─── Course Phases ────────────────────────────────────────────────────────────
+
+model CoursePhase {
+  id                  String      @id @default(uuid())
+  name                String
+  status              PhaseStatus @default(DRAFT)
+  registrationStart   DateTime?
+  registrationEnd     DateTime?
+  allocationDate      DateTime?
+  executionStart      DateTime?
+  executionEnd        DateTime?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  activities Activity[]
+}
+
+// ─── Activities ───────────────────────────────────────────────────────────────
+
+model Activity {
+  id           String         @id @default(uuid())
+  phaseId      String
+  instructorId String
+  title        String
+  description  String?
+  status       ActivityStatus @default(DRAFT)
+  capacity     Int
+  minAge       Int?
+  maxAge       Int?
+  location     String?
+  startDate    DateTime?
+  endDate      DateTime?
+  mediaUrls    String[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  phase         CoursePhase    @relation(fields: [phaseId], references: [id])
+  instructor    Profile        @relation("InstructorActivities", fields: [instructorId], references: [id])
+  registrations Registration[]
+}
+
+// ─── Registrations ────────────────────────────────────────────────────────────
+
+model Registration {
+  id           String             @id @default(uuid())
+  activityId   String
+  childId      String
+  parentId     String
+  status       RegistrationStatus @default(PENDING)
+  waitlistPos  Int?
+  notes        String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  activity Activity @relation(fields: [activityId], references: [id])
+  child    Child    @relation(fields: [childId], references: [id])
+  parent   Profile  @relation(fields: [parentId], references: [id])
+
+  @@unique([activityId, childId])
+}
+
+// ─── CMS ──────────────────────────────────────────────────────────────────────
+
+model NewsPost {
+  id          String    @id @default(uuid())
+  title       String
+  body        String
+  authorId    String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author Profile @relation(fields: [authorId], references: [id])
+}
+
+model InfoPage {
+  id        String   @id @default(uuid())
+  slug      String   @unique
   title     String
-  done      Boolean  @default(false)
+  body      String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

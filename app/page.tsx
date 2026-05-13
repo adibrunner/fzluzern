@@ -1,124 +1,68 @@
-// app/page.tsx
-export const runtime = "nodejs";
+import Link from "next/link";
+import { prisma } from "./lib/prisma";
 
-import { revalidatePath } from "next/cache";
-
-import { prisma } from './lib/prisma';
-
-// --- Server Actions ---
-async function getTodos() {
-  return prisma.todoLoeschmich.findMany({
-    orderBy: { createdAt: "desc" },
+export default async function HomePage() {
+  const newsPosts = await prisma.newsPost.findMany({
+    where: { publishedAt: { not: null } },
+    orderBy: { publishedAt: "desc" },
+    take: 3,
+    include: { author: true },
   });
-}
-
-export async function createTodo(formData: FormData) {
-  "use server";
-  const title = (formData.get("title") as string)?.trim();
-  if (!title) return;
-  await prisma.todoLoeschmich.create({
-    data: { title, done: false },
-  });
-  revalidatePath("/");
-}
-
-export async function toggleDone(formData: FormData) {
-  "use server";
-  const id = Number(formData.get("id"));
-  const done = formData.get("done") === "true";
-  if (!Number.isFinite(id)) return;
-  await prisma.todoLoeschmich.update({
-    where: { id },
-    data: { done },
-  });
-  revalidatePath("/");
-}
-
-// --- Page (Server Component) ---
-export default async function Page() {
-  const todos = await getTodos();
 
   return (
-    <main className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold">Todos</h1>
+    <div className="min-h-screen flex flex-col">
+      {/* Header */}
+      <header className="navbar bg-primary text-primary-content px-6 shadow">
+        <div className="flex-1">
+          <span className="text-xl font-bold">Freizeit Luzern</span>
+        </div>
+        <div className="flex-none gap-2">
+          <Link href="/aktivitaeten" className="btn btn-ghost btn-sm">Aktivitäten</Link>
+          <Link href="/aktuelles" className="btn btn-ghost btn-sm">Aktuelles</Link>
+          <Link href="/auth/anmelden" className="btn btn-primary-content btn-sm border border-primary-content">Anmelden</Link>
+        </div>
+      </header>
 
-      {/* Neuer Eintrag */}
-      <section className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title">Neuen Eintrag erstellen</h2>
-          <form action={createTodo} className="flex gap-3">
-            <input
-              name="title"
-              type="text"
-              placeholder="Titel..."
-              className="input input-bordered flex-1"
-              required
-            />
-            <button className="btn btn-primary" type="submit">
-              Hinzufügen
-            </button>
-          </form>
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-primary to-primary-focus text-primary-content py-20 px-6 text-center">
+        <h1 className="text-4xl font-extrabold mb-4">Freizeit für Kinder und Jugendliche in Luzern</h1>
+        <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
+          Entdecken Sie Kursangebote, melden Sie Ihre Kinder an und verwalten Sie alles an einem Ort.
+        </p>
+        <div className="flex gap-3 justify-center flex-wrap">
+          <Link href="/aktivitaeten" className="btn btn-white text-primary">Aktivitäten entdecken</Link>
+          <Link href="/auth/registrieren" className="btn btn-outline btn-white">Jetzt registrieren</Link>
         </div>
       </section>
 
-      {/* Tabelle */}
-      <section className="card bg-base-100 shadow">
-        <div className="card-body">
-          <h2 className="card-title">Übersicht</h2>
-
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Titel</th>
-                  <th>Status</th>
-                  <th>Erstellt</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todos.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="text-center text-base-content/60">
-                      Keine Einträge vorhanden.
-                    </td>
-                  </tr>
-                )}
-
-                {todos.map((t) => (
-                  <tr key={t.id} className={t.done ? "opacity-60" : ""}>
-                    <td>{t.id}</td>
-                    <td className={t.done ? "line-through" : ""}>{t.title}</td>
-                    <td>
-                      {t.done ? (
-                        <span className="badge badge-success">Erledigt</span>
-                      ) : (
-                        <span className="badge badge-warning">Offen</span>
-                      )}
-                    </td>
-                    <td>{new Date(t.createdAt).toLocaleString()}</td>
-                    <td>
-                      <form action={toggleDone} className="inline">
-                        <input type="hidden" name="id" value={t.id} />
-                        {/* Wir setzen explizit auf true/false, was der neue Zustand sein soll */}
-                        <input type="hidden" name="done" value={(!t.done).toString()} />
-                        <button
-                          className={`btn btn-sm ${t.done ? "btn-ghost" : "btn-secondary"}`}
-                          type="submit"
-                          title={t.done ? "Als offen markieren" : "Als erledigt markieren"}
-                        >
-                          {t.done ? "Reopen" : "Erledigt"}
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* News */}
+      <section className="py-16 px-6 max-w-5xl mx-auto w-full">
+        <h2 className="text-2xl font-bold mb-6">Aktuelles</h2>
+        {newsPosts.length === 0 ? (
+          <p className="text-base-content/60">Noch keine Beiträge vorhanden.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {newsPosts.map((post) => (
+              <Link key={post.id} href={`/aktuelles/${post.id}`} className="card bg-base-100 border border-base-200 hover:shadow-md transition-shadow">
+                <div className="card-body">
+                  <h3 className="card-title text-base">{post.title}</h3>
+                  <p className="text-sm text-base-content/60 line-clamp-3">{post.body}</p>
+                  <p className="text-xs text-base-content/40 mt-2">
+                    {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString("de-CH") : ""}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
+        )}
+        <div className="mt-6">
+          <Link href="/aktuelles" className="link link-primary">Alle Beiträge →</Link>
         </div>
       </section>
-    </main>
+
+      <footer className="mt-auto bg-base-200 text-base-content/60 text-sm py-6 px-6 text-center">
+        © {new Date().getFullYear()} Freizeit Luzern · Stadt Luzern
+      </footer>
+    </div>
   );
 }
