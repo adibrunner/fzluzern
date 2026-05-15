@@ -1,6 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import PublicNavbar from "@/app/components/PublicNavbar";
 
 export default async function NewsDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -12,12 +13,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="navbar bg-primary text-primary-content px-6 shadow">
-        <div className="flex-1"><Link href="/" className="text-xl font-bold">Freizeit Luzern</Link></div>
-        <div className="flex-none gap-2">
-          <Link href="/aktuelles" className="btn btn-ghost btn-sm">← Aktuelles</Link>
-        </div>
-      </header>
+      <PublicNavbar />
       <main className="flex-1 py-12 px-6 max-w-3xl mx-auto w-full">
         <article className="prose lg:prose-lg max-w-none">
           <h1>{post.title}</h1>

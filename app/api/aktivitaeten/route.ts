@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  const { title, description, phaseId, capacity, minAge, maxAge, location, startDate, endDate } = await req.json();
+  const { title, description, phaseId, capacity, minAge, maxAge, location, executions } = await req.json();
   if (!title || !phaseId || !capacity) {
     return NextResponse.json({ error: "Pflichtfelder fehlen" }, { status: 400 });
   }
@@ -27,9 +27,17 @@ export async function POST(req: NextRequest) {
       minAge: minAge ?? null,
       maxAge: maxAge ?? null,
       location: location || null,
-      startDate: startDate ? new Date(startDate) : null,
-      endDate: endDate ? new Date(endDate) : null,
       status: "DRAFT",
+      executions: executions?.length
+        ? {
+            create: executions.map((ex: { startDate: string; endDate?: string; location?: string; notes?: string }) => ({
+              startDate: new Date(ex.startDate),
+              endDate: ex.endDate ? new Date(ex.endDate) : null,
+              location: ex.location || null,
+              notes: ex.notes || null,
+            })),
+          }
+        : undefined,
     },
   });
 

@@ -1,6 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+import PublicNavbar from "@/app/components/PublicNavbar";
 
 export default async function InfoPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -9,9 +9,7 @@ export default async function InfoPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="navbar bg-primary text-primary-content px-6 shadow">
-        <div className="flex-1"><Link href="/" className="text-xl font-bold">Freizeit Luzern</Link></div>
-      </header>
+      <PublicNavbar />
       <main className="flex-1 py-12 px-6 max-w-3xl mx-auto w-full">
         <article className="prose lg:prose-lg max-w-none">
           <h1>{page.title}</h1>

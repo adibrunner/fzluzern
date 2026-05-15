@@ -9,7 +9,7 @@ export default async function ActivityEditPage({ params }: { params: Promise<{ i
   const { id } = await params;
 
   const [activity, phases] = await Promise.all([
-    prisma.activity.findUnique({ where: { id }, include: { phase: true } }),
+    prisma.activity.findUnique({ where: { id }, include: { phase: true, executions: { orderBy: { startDate: "asc" } } } }),
     prisma.coursePhase.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
 

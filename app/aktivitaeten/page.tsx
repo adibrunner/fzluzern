@@ -1,4 +1,5 @@
 import { prisma } from "@/app/lib/prisma";
+import PublicNavbar from "@/app/components/PublicNavbar";
 import Link from "next/link";
 
 export default async function AktivitaetenPage() {
@@ -7,22 +8,15 @@ export default async function AktivitaetenPage() {
     include: {
       instructor: { select: { firstName: true, lastName: true } },
       phase: { select: { name: true } },
+      executions: { orderBy: { startDate: "asc" }, take: 1 },
       _count: { select: { registrations: { where: { status: { in: ["CONFIRMED", "WAITLISTED"] } } } } },
     },
-    orderBy: { startDate: "asc" },
+    orderBy: { title: "asc" },
   });
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="navbar bg-primary text-primary-content px-6 shadow">
-        <div className="flex-1">
-          <Link href="/" className="text-xl font-bold">Freizeit Luzern</Link>
-        </div>
-        <div className="flex-none gap-2">
-          <Link href="/aktuelles" className="btn btn-ghost btn-sm">Aktuelles</Link>
-          <Link href="/auth/anmelden" className="btn btn-ghost btn-sm">Anmelden</Link>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main className="flex-1 py-12 px-6 max-w-5xl mx-auto w-full">
         <h1 className="text-3xl font-bold mb-2">Aktivitäten</h1>
@@ -45,8 +39,8 @@ export default async function AktivitaetenPage() {
                     <p className="text-sm text-base-content/60 line-clamp-2">{a.description}</p>
                   )}
                   <div className="mt-2 space-y-1 text-xs text-base-content/50">
-                    {a.startDate && <p>📅 {new Date(a.startDate).toLocaleDateString("de-CH")}</p>}
-                    {a.location && <p>📍 {a.location}</p>}
+                    {a.executions[0] && <p>📅 {new Date(a.executions[0].startDate).toLocaleDateString("de-CH")}</p>}
+                    {(a.executions[0]?.location ?? a.location) && <p>📍 {a.executions[0]?.location ?? a.location}</p>}
                     {(a.minAge || a.maxAge) && (
                       <p>👤 {a.minAge && `ab ${a.minAge} J.`}{a.minAge && a.maxAge && " – "}{a.maxAge && `bis ${a.maxAge} J.`}</p>
                     )}

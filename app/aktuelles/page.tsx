@@ -1,5 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import Link from "next/link";
+import PublicNavbar from "@/app/components/PublicNavbar";
 
 export default async function AktuellesPage() {
   const posts = await prisma.newsPost.findMany({
@@ -10,13 +11,7 @@ export default async function AktuellesPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="navbar bg-primary text-primary-content px-6 shadow">
-        <div className="flex-1"><Link href="/" className="text-xl font-bold">Freizeit Luzern</Link></div>
-        <div className="flex-none gap-2">
-          <Link href="/aktivitaeten" className="btn btn-ghost btn-sm">Aktivitäten</Link>
-          <Link href="/auth/anmelden" className="btn btn-ghost btn-sm">Anmelden</Link>
-        </div>
-      </header>
+      <PublicNavbar />
       <main className="flex-1 py-12 px-6 max-w-4xl mx-auto w-full">
         <h1 className="text-3xl font-bold mb-8">Aktuelles</h1>
         {posts.length === 0 ? (

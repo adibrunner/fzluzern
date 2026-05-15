@@ -14,10 +14,12 @@ const STATUSES = [
   { value: "ARCHIVED", label: "Archiviert" },
 ];
 
-function fmtDate(d: Date | string | null) {
+function fmtDate(d: Date | string | null | undefined) {
   if (!d) return "";
   return new Date(d).toISOString().split("T")[0];
 }
+
+interface ExecData { id?: string; startDate: string; endDate: string; location: string; notes: string }
 
 interface Reg {
   id: string;
@@ -29,7 +31,8 @@ interface Reg {
 interface ActivityData {
   id: string; title: string; description: string | null; status: string;
   phaseId: string; capacity: number; minAge: number | null; maxAge: number | null;
-  location: string | null; startDate: Date | null; endDate: Date | null;
+  location: string | null;
+  executions: { id: string; startDate: Date; endDate: Date | null; location: string | null; notes: string | null }[];
 }
 
 interface PhaseData { id: string; name: string }
@@ -43,6 +46,23 @@ export default function ActivityEditForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [executions, setExecutions] = useState<ExecData[]>(
+    activity.executions.length > 0
+      ? activity.executions.map((ex) => ({
+          id: ex.id,
+          startDate: fmtDate(ex.startDate),
+          endDate: fmtDate(ex.endDate),
+          location: ex.location ?? "",
+          notes: ex.notes ?? "",
+        }))
+      : [{ startDate: "", endDate: "", location: "", notes: "" }]
+  );
+
+  function addExecution() { setExecutions((p) => [...p, { startDate: "", endDate: "", location: "", notes: "" }]); }
+  function removeExecution(i: number) { setExecutions((p) => p.filter((_, idx) => idx !== i)); }
+  function updateExecution(i: number, field: keyof ExecData, value: string) {
+    setExecutions((p) => p.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,18 +82,12 @@ export default function ActivityEditForm({
         minAge: get("minAge") ? Number(get("minAge")) : null,
         maxAge: get("maxAge") ? Number(get("maxAge")) : null,
         location: get("location") || null,
-        startDate: get("startDate") || null,
-        endDate: get("endDate") || null,
+        executions: executions.filter((ex) => ex.startDate),
       }),
     });
 
-    if (res.ok) {
-      setSuccess(true);
-      router.refresh();
-    } else {
-      const json = await res.json();
-      setError(json.error ?? "Fehler beim Speichern.");
-    }
+    if (res.ok) { setSuccess(true); router.refresh(); }
+    else { const json = await res.json(); setError(json.error ?? "Fehler beim Speichern."); }
     setLoading(false);
   }
 
@@ -90,53 +104,85 @@ export default function ActivityEditForm({
       {error && <div className="alert alert-error"><span>{error}</span></div>}
       {success && <div className="alert alert-success"><span>Gespeichert.</span></div>}
 
-      <form onSubmit={handleSubmit} className="card bg-base-100 border border-base-200">
-        <div className="card-body space-y-4">
-          <div className="form-control">
-            <label className="label"><span className="label-text">Titel *</span></label>
-            <input name="title" type="text" className="input input-bordered" defaultValue={activity.title} required />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="card bg-base-100 border border-base-200">
+          <div className="card-body space-y-4">
+            <h2 className="font-semibold">Grunddaten</h2>
+            <div className="form-control">
+              <label className="label"><span className="label-text">Titel *</span></label>
+              <input name="title" type="text" className="input input-bordered" defaultValue={activity.title} required />
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text">Beschreibung</span></label>
+              <textarea name="description" className="textarea textarea-bordered" rows={4} defaultValue={activity.description ?? ""} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="form-control">
+                <label className="label"><span className="label-text">Status</span></label>
+                <select name="status" className="select select-bordered" defaultValue={activity.status}>
+                  {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                </select>
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Kapazität *</span></label>
+                <input name="capacity" type="number" min={1} className="input input-bordered" defaultValue={activity.capacity} required />
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Mindestalter</span></label>
+                <input name="minAge" type="number" min={0} className="input input-bordered" defaultValue={activity.minAge ?? ""} />
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Maximalalter</span></label>
+                <input name="maxAge" type="number" min={0} className="input input-bordered" defaultValue={activity.maxAge ?? ""} />
+              </div>
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text">Standard-Ort</span></label>
+              <input name="location" type="text" className="input input-bordered" defaultValue={activity.location ?? ""} />
+            </div>
           </div>
-          <div className="form-control">
-            <label className="label"><span className="label-text">Beschreibung</span></label>
-            <textarea name="description" className="textarea textarea-bordered" rows={4} defaultValue={activity.description ?? ""} />
+        </div>
+
+        {/* Executions */}
+        <div className="card bg-base-100 border border-base-200">
+          <div className="card-body space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="font-semibold">Durchführungsdaten</h2>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={addExecution}>+ Termin</button>
+            </div>
+            {executions.map((ex, i) => (
+              <div key={i} className="border border-base-300 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Termin {i + 1}</span>
+                  {executions.length > 1 && <button type="button" className="btn btn-ghost btn-xs text-error" onClick={() => removeExecution(i)}>×</button>}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="form-control">
+                    <label className="label py-0"><span className="label-text text-xs">Startdatum</span></label>
+                    <input type="date" className="input input-bordered input-sm" value={ex.startDate} onChange={(e) => updateExecution(i, "startDate", e.target.value)} />
+                  </div>
+                  <div className="form-control">
+                    <label className="label py-0"><span className="label-text text-xs">Enddatum</span></label>
+                    <input type="date" className="input input-bordered input-sm" value={ex.endDate} onChange={(e) => updateExecution(i, "endDate", e.target.value)} />
+                  </div>
+                  <div className="form-control">
+                    <label className="label py-0"><span className="label-text text-xs">Ort</span></label>
+                    <input type="text" className="input input-bordered input-sm" value={ex.location} onChange={(e) => updateExecution(i, "location", e.target.value)} />
+                  </div>
+                  <div className="form-control">
+                    <label className="label py-0"><span className="label-text text-xs">Hinweis</span></label>
+                    <input type="text" className="input input-bordered input-sm" value={ex.notes} onChange={(e) => updateExecution(i, "notes", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="form-control">
-              <label className="label"><span className="label-text">Status</span></label>
-              <select name="status" className="select select-bordered" defaultValue={activity.status}>
-                {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text">Kapazität *</span></label>
-              <input name="capacity" type="number" min={1} className="input input-bordered" defaultValue={activity.capacity} required />
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text">Mindestalter</span></label>
-              <input name="minAge" type="number" min={0} className="input input-bordered" defaultValue={activity.minAge ?? ""} />
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text">Maximalalter</span></label>
-              <input name="maxAge" type="number" min={0} className="input input-bordered" defaultValue={activity.maxAge ?? ""} />
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text">Startdatum</span></label>
-              <input name="startDate" type="date" className="input input-bordered" defaultValue={fmtDate(activity.startDate)} />
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text">Enddatum</span></label>
-              <input name="endDate" type="date" className="input input-bordered" defaultValue={fmtDate(activity.endDate)} />
-            </div>
-          </div>
-          <div className="form-control">
-            <label className="label"><span className="label-text">Ort</span></label>
-            <input name="location" type="text" className="input input-bordered" defaultValue={activity.location ?? ""} />
-          </div>
-          <div className="card-actions justify-end">
-            <button type="submit" className="btn btn-primary" disabled={loading}>
-              {loading ? <span className="loading loading-spinner loading-sm" /> : "Speichern"}
-            </button>
-          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? <span className="loading loading-spinner loading-sm" /> : "Speichern"}
+          </button>
         </div>
       </form>
 

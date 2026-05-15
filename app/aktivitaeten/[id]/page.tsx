@@ -3,6 +3,7 @@ import { getProfile } from "@/app/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import AnmeldenButton from "./AnmeldenButton";
+import PublicNavbar from "@/app/components/PublicNavbar";
 
 export default async function AktivitaetDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -13,6 +14,7 @@ export default async function AktivitaetDetailPage({ params }: { params: Promise
       include: {
         instructor: { select: { firstName: true, lastName: true } },
         phase: true,
+        executions: { orderBy: { startDate: "asc" } },
         _count: { select: { registrations: { where: { status: "CONFIRMED" } } } },
       },
     }),
@@ -40,15 +42,7 @@ export default async function AktivitaetDetailPage({ params }: { params: Promise
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="navbar bg-primary text-primary-content px-6 shadow">
-        <div className="flex-1">
-          <Link href="/" className="text-xl font-bold">Freizeit Luzern</Link>
-        </div>
-        <div className="flex-none gap-2">
-          <Link href="/aktivitaeten" className="btn btn-ghost btn-sm">Zurück</Link>
-          <Link href="/auth/anmelden" className="btn btn-ghost btn-sm">Anmelden</Link>
-        </div>
-      </header>
+      <PublicNavbar />
 
       <main className="flex-1 py-12 px-6 max-w-3xl mx-auto w-full">
         <div className="card bg-base-100 border border-base-200 shadow">
@@ -59,13 +53,23 @@ export default async function AktivitaetDetailPage({ params }: { params: Promise
               <p className="text-base-content/70">{activity.description}</p>
             )}
 
+            {activity.executions.length > 0 && (
+              <div>
+                <p className="text-sm text-base-content/50 mb-2">Durchführungsdaten</p>
+                <ul className="space-y-1">
+                  {activity.executions.map((ex) => (
+                    <li key={ex.id} className="text-sm">
+                      📅 {new Date(ex.startDate).toLocaleDateString("de-CH")}
+                      {ex.endDate && ` – ${new Date(ex.endDate).toLocaleDateString("de-CH")}`}
+                      {ex.location && ` · 📍 ${ex.location}`}
+                      {ex.notes && <span className="text-base-content/50"> ({ex.notes})</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4 text-sm">
-              {activity.startDate && (
-                <div><p className="text-base-content/50">Startdatum</p><p className="font-medium">{new Date(activity.startDate).toLocaleDateString("de-CH")}</p></div>
-              )}
-              {activity.endDate && (
-                <div><p className="text-base-content/50">Enddatum</p><p className="font-medium">{new Date(activity.endDate).toLocaleDateString("de-CH")}</p></div>
-              )}
               {activity.location && (
                 <div><p className="text-base-content/50">Ort</p><p className="font-medium">{activity.location}</p></div>
               )}

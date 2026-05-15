@@ -34,6 +34,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthRoute = pathname.startsWith("/auth");
   const isPublicRoute =
     pathname === "/" ||
+    pathname.startsWith("/aktivitaeten") ||
     pathname.startsWith("/aktuelles") ||
     pathname.startsWith("/info") ||
     pathname === "/api/auth/profil-erstellen";

@@ -114,15 +114,29 @@ model Activity {
   minAge       Int?
   maxAge       Int?
   location     String?
-  startDate    DateTime?
-  endDate      DateTime?
   mediaUrls    String[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
-  phase         CoursePhase    @relation(fields: [phaseId], references: [id])
-  instructor    Profile        @relation("InstructorActivities", fields: [instructorId], references: [id])
+  phase         CoursePhase        @relation(fields: [phaseId], references: [id])
+  instructor    Profile            @relation("InstructorActivities", fields: [instructorId], references: [id])
   registrations Registration[]
+  executions    ActivityExecution[]
+
+  @@index([phaseId])
+  @@index([instructorId])
+}
+
+model ActivityExecution {
+  id         String    @id @default(uuid())
+  activityId String
+  startDate  DateTime
+  endDate    DateTime?
+  location   String?
+  notes      String?
+  createdAt  DateTime  @default(now())
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }
 
 // ─── Registrations ────────────────────────────────────────────────────────────
