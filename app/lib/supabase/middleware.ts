@@ -35,7 +35,8 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     pathname === "/" ||
     pathname.startsWith("/aktuelles") ||
-    pathname.startsWith("/info");
+    pathname.startsWith("/info") ||
+    pathname === "/api/auth/profil-erstellen";
 
   if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
